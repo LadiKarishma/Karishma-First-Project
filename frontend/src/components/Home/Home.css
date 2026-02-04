@@ -1,0 +1,31 @@
+.home-container {
+  min-height: 100vh;
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  background-color: #f4f6f8;
+}
+
+.home-card {
+  background-color: white;
+  padding: 30px;
+  width: 360px;
+  border-radius: 10px;
+  text-align: center;
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.2);
+}
+
+.home-card h2 {
+  margin-bottom: 20px;
+}
+
+.home-card button {
+  width: 100%;
+  padding: 10px;
+  margin: 8px 0;
+  background-color: #185a9d;
+  color: white;
+  border: none;
+  border-radius: 5px;
+  cursor: pointer;
+}
