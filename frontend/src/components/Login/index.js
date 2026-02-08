@@ -1,4 +1,3 @@
-// import { Link } from "react-router-dom";
 import axios from "axios";
 import { useState } from "react";
 import "./Login.css";
@@ -8,40 +7,51 @@ function Login() {
   const [password, setPassword] = useState("");
 
   const login = async () => {
-    const res = await axios.post("http://localhost:5000/api/auth/login", {
-      email,
-      password,
-    });
+    if (!email.trim() || !password.trim()) {
+      alert("Please enter email and password");
+      return;
+    }
 
-    localStorage.setItem("token", res.data.token);
-    window.location = "/home";
+    try {
+      const res = await axios.post("http://localhost:5000/api/auth/login", {
+        email,
+        password,
+      });
+
+      localStorage.setItem("token", res.data.token);
+      window.location = "/home";
+    } catch (error) {
+      alert(error.response?.data?.message || "Login failed");
+    }
   };
 
-return (
-  <div className="login-container">
-    <div className="login-card">
-      <h2 className="login-card h2">Login</h2>
-      <input className="login-card input"
-        type="email"
-        placeholder="Email"
-        onChange={(e) => setEmail(e.target.value)}
-      />
+  return (
+    <div className="login-container">
+      <div className="login-card">
+        <h2>Login</h2>
 
-      <input className="login-card input"
-        type="password"
-        placeholder="Password"
-        onChange={(e) => setPassword(e.target.value)}
-      />
+        <input
+          type="email"
+          placeholder="Email"
+          value={email}
+          onChange={(e) => setEmail(e.target.value)}
+        />
 
-      <button className="login-card button" onClick={login}>Login</button>
+        <input
+          type="password"
+          placeholder="Password"
+          value={password}
+          onChange={(e) => setPassword(e.target.value)}
+        />
 
-      <p>
-        Don't have an account? <a href="/signup">Signup</a>
-      </p>
+        <button onClick={login}>Login</button>
+
+        <p>
+          Don't have an account? <a href="/signup">Signup</a>
+        </p>
+      </div>
     </div>
-  </div>
-);
-
+  );
 }
 
 export default Login;
