@@ -147,15 +147,28 @@ app.post("/api/attendance/clockout", auth, async (req, res) => {
 
 
 app.get("/api/attendance/status", auth, async (req, res) => {
-  // Get latest attendance record
-  const attendance = await Attendance.findOne({ userId: req.userId })
-    .sort({ createdAt: -1 });
+  // Get today's date (local)
+  const today = new Date();
+  today.setHours(0, 0, 0, 0);
+
+  const tomorrow = new Date(today);
+  tomorrow.setDate(today.getDate() + 1);
+
+  // Find attendance ONLY for today
+  const attendance = await Attendance.findOne({
+    userId: req.userId,
+    clockIn: {
+      $gte: today,
+      $lt: tomorrow
+    }
+  }).sort({ clockIn: -1 });
 
   if (!attendance) {
-    return res.json({ status: "Not Clocked In" });
+    return res.json({
+      status: "Not Clocked In"
+    });
   }
 
-  // Still clocked in
   if (!attendance.clockOut) {
     return res.json({
       status: "Clocked In",
@@ -163,7 +176,6 @@ app.get("/api/attendance/status", auth, async (req, res) => {
     });
   }
 
-  // Clocked out
   return res.json({
     status: "Clocked Out",
     clockInTime: attendance.clockIn,
@@ -171,11 +183,9 @@ app.get("/api/attendance/status", auth, async (req, res) => {
   });
 });
 
-
 // ==================
 // Server
 // ==================
 app.listen(5000, () => {
   console.log("Server running on port 5000");
 });
-

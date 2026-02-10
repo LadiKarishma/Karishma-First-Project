@@ -10,21 +10,25 @@ function Signup() {
   const [password, setPassword] = useState("");
   const navigate = useNavigate();
 
-  const signup = async () => {
-    if (!name || !email || !password) {
-      alert("All fields are required");
-      return;
-    }
+    const signup = async () => {
+      if (!name || !email || !password) {
+        alert("All fields are required");
+        return;
+      }
 
-    await axios.post("http://localhost:5000/api/auth/signup", {
-      name,
-      email,
-      password,
-    });
+      try {
+        await axios.post("http://localhost:5000/api/auth/signup", {
+          name,
+          email,
+          password,
+        });
 
-    alert("Signup successful. Please login.");
-    navigate("/");
-  };
+        alert("Signup successful. Please login.");
+        navigate("/");
+      } catch (error) {
+        alert(error.response?.data?.message || "Signup failed");
+      }
+    };
 
 return (
   <div className="signup-container">
