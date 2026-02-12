@@ -117,7 +117,7 @@ const clockIn = async () => {
 
     alert(`Clocked In at ${time}`);
   } catch (err) {
-    alert("Clock In failed");
+    alert(err.response?.data?.message || "Clock In failed");
   }
 };
 

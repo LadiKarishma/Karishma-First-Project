@@ -10,29 +10,26 @@ const app = express();
 app.use(cors());
 app.use(express.json());
 
-// ==================
-// MongoDB Connection
-// ==================
 connectDB();
 
 // ==================
 // Schemas & Models
 // ==================
+
 const userSchema = new mongoose.Schema({
   name: String,
   email: { type: String, unique: true },
-  password: String
+  password: String,
 });
 
-const attendanceSchema = new mongoose.Schema(
-  {
-    userId: mongoose.Schema.Types.ObjectId,
-    clockIn: Date,
-    clockOut: Date
+const attendanceSchema = new mongoose.Schema({
+  userId: {
+    type: mongoose.Schema.Types.ObjectId,
+    ref: "User",
   },
-  { timestamps: true }
-);
-
+  clockIn: Date,
+  clockOut: Date,
+});
 
 const User = mongoose.model("User", userSchema);
 const Attendance = mongoose.model("Attendance", attendanceSchema);
@@ -40,6 +37,7 @@ const Attendance = mongoose.model("Attendance", attendanceSchema);
 // ==================
 // Auth Middleware
 // ==================
+
 const auth = (req, res, next) => {
   const token = req.headers.authorization;
 
@@ -59,22 +57,18 @@ const auth = (req, res, next) => {
 // ==================
 // AUTH ROUTES
 // ==================
+
 app.post("/api/auth/signup", async (req, res) => {
   const { name, email, password } = req.body;
 
   if (!name || !email || !password) {
-    return res.status(400).json({ message: "All fields are required" });
+    return res.status(400).json({ message: "All fields required" });
   }
 
   const hashedPassword = await bcrypt.hash(password, 10);
 
   try {
-    await User.create({
-      name,
-      email,
-      password: hashedPassword
-    });
-
+    await User.create({ name, email, password: hashedPassword });
     res.status(201).json({ message: "User created successfully" });
   } catch (error) {
     res.status(400).json({ message: "Email already exists" });
@@ -85,20 +79,15 @@ app.post("/api/auth/login", async (req, res) => {
   const { email, password } = req.body;
 
   const user = await User.findOne({ email });
-  if (!user) {
-    return res.status(400).json({ message: "Invalid credentials" });
-  }
+  if (!user) return res.status(400).json({ message: "Invalid credentials" });
 
   const isMatch = await bcrypt.compare(password, user.password);
-  if (!isMatch) {
+  if (!isMatch)
     return res.status(400).json({ message: "Invalid credentials" });
-  }
 
-  const token = jwt.sign(
-    { id: user._id },
-    "SECRET_KEY",
-    { expiresIn: "1h" }
-  );
+  const token = jwt.sign({ id: user._id }, "SECRET_KEY", {
+    expiresIn: "1h",
+  });
 
   res.json({ token });
 });
@@ -106,86 +95,134 @@ app.post("/api/auth/login", async (req, res) => {
 // ==================
 // ATTENDANCE ROUTES
 // ==================
+
 app.post("/api/attendance/clockin", auth, async (req, res) => {
-  const existing = await Attendance.findOne({
-    userId: req.userId,
-    clockOut: null
-  });
+  try {
+    const now = new Date();
 
-  if (existing) {
-    return res.status(400).json({
-      message: "Already clocked in",
-      attendance: existing
+    const startOfDay = new Date(now);
+    startOfDay.setHours(0, 0, 0, 0);
+
+    const endOfDay = new Date(now);
+    endOfDay.setHours(23, 59, 59, 999);
+
+    // Check if already clocked in today
+    const existing = await Attendance.findOne({
+      userId: req.userId,
+      clockIn: { $gte: startOfDay, $lte: endOfDay }
     });
+
+    if (existing) {
+      return res.status(400).json({
+        message: "You have already clocked in today"
+      });
+    }
+
+    const attendance = await Attendance.create({
+      userId: req.userId,
+      clockIn: now,
+      clockOut: null
+    });
+
+    res.json({
+      message: "Clocked In",
+      attendance
+    });
+
+  } catch (error) {
+    res.status(500).json({ message: "Clock In failed" });
   }
-
-  const attendance = await Attendance.create({
-    userId: req.userId,
-    clockIn: new Date(),
-    clockOut: null
-  });
-
-  res.json({ message: "Clocked In", attendance });
 });
-
 
 app.post("/api/attendance/clockout", auth, async (req, res) => {
-  const attendance = await Attendance.findOne({
-    userId: req.userId,
-    clockOut: null
-  });
+  try {
+    const now = new Date();
 
-  if (!attendance) {
-    return res.status(400).json({ message: "No active clock-in found" });
+    const startOfDay = new Date(now);
+    startOfDay.setHours(0, 0, 0, 0);
+
+    const endOfDay = new Date(now);
+    endOfDay.setHours(23, 59, 59, 999);
+
+    const attendance = await Attendance.findOne({
+      userId: req.userId,
+      clockIn: { $gte: startOfDay, $lte: endOfDay },
+      clockOut: null
+    });
+
+    if (!attendance) {
+      return res.status(400).json({
+        message: "No active clock-in found for today"
+      });
+    }
+
+    attendance.clockOut = now;
+    await attendance.save();
+
+    res.json({
+      message: "Clocked Out",
+      attendance
+    });
+
+  } catch (error) {
+    res.status(500).json({ message: "Clock Out failed" });
   }
-
-  attendance.clockOut = new Date();
-  await attendance.save();
-
-  res.json({ message: "Clocked Out", attendance });
 });
 
-
 app.get("/api/attendance/status", auth, async (req, res) => {
-  // Get today's date (local)
-  const today = new Date();
-  today.setHours(0, 0, 0, 0);
+  try {
+    const now = new Date();
 
-  const tomorrow = new Date(today);
-  tomorrow.setDate(today.getDate() + 1);
+    // Convert to IST manually (important)
+    const IST_OFFSET = 5.5 * 60 * 60 * 1000;
+    const istNow = new Date(now.getTime() + IST_OFFSET);
 
-  // Find attendance ONLY for today
-  const attendance = await Attendance.findOne({
-    userId: req.userId,
-    clockIn: {
-      $gte: today,
-      $lt: tomorrow
+    const startOfDay = new Date(istNow);
+    startOfDay.setHours(0, 0, 0, 0);
+
+    const endOfDay = new Date(istNow);
+    endOfDay.setHours(23, 59, 59, 999);
+
+    // Convert back to UTC for MongoDB comparison
+    const startUTC = new Date(startOfDay.getTime() - IST_OFFSET);
+    const endUTC = new Date(endOfDay.getTime() - IST_OFFSET);
+
+    const attendance = await Attendance.findOne({
+      userId: req.userId,
+      clockIn: { $gte: startUTC, $lte: endUTC },
+    });
+
+    if (!attendance) {
+      return res.json({
+        status: "Not Clocked In",
+        clockInTime: null,
+        clockOutTime: null,
+      });
     }
-  }).sort({ clockIn: -1 });
 
-  if (!attendance) {
+    if (!attendance.clockOut) {
+      return res.json({
+        status: "Clocked In",
+        clockInTime: attendance.clockIn,
+        clockOutTime: null,
+      });
+    }
+
     return res.json({
-      status: "Not Clocked In"
+      status: "Clocked Out",
+      clockInTime: attendance.clockIn,
+      clockOutTime: attendance.clockOut,
     });
-  }
 
-  if (!attendance.clockOut) {
-    return res.json({
-      status: "Clocked In",
-      clockInTime: attendance.clockIn
-    });
+  } catch (error) {
+    res.status(500).json({ message: "Server error" });
   }
-
-  return res.json({
-    status: "Clocked Out",
-    clockInTime: attendance.clockIn,
-    clockOutTime: attendance.clockOut
-  });
 });
 
 // ==================
 // Server
 // ==================
+
 app.listen(5000, () => {
   console.log("Server running on port 5000");
 });
