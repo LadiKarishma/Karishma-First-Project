@@ -60,7 +60,7 @@ useEffect(() => {
   const fetchStatus = async () => {
     try {
       const res = await axios.get(
-        "https://karishmaladi-mernstack-project.onrender.com/api/attendance/status",
+        "https://attendanceapp-bdsg.onrender.com/api/attendance/status",
         { headers: { Authorization: token } }
       );
 
@@ -106,7 +106,7 @@ const clockIn = async () => {
 
   try {
     const res = await axios.post(
-      "https://karishmaladi-mernstack-project.onrender.com/api/attendance/clockin",
+      "https://attendanceapp-bdsg.onrender.com/api/attendance/clockin",
       {},
       { headers: { Authorization: token } }
     );
@@ -131,7 +131,7 @@ const clockOut = async () => {
 
   try {
     const res = await axios.post(
-      "https://karishmaladi-mernstack-project.onrender.com/api/attendance/clockout",
+      "https://attendanceapp-bdsg.onrender.com/api/attendance/clockout",
       {},
       { headers: { Authorization: token } }
     );

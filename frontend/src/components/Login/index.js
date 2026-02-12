@@ -13,7 +13,7 @@ function Login() {
     }
 
     try {
-      const res = await axios.post("https://karishmaladi-mernstack-project.onrender.com/api/auth/login", {
+      const res = await axios.post("https://attendanceapp-bdsg.onrender.com/api/auth/login", {
         email,
         password,
       });

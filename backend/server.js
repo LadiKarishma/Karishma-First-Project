@@ -10,6 +10,7 @@ const connectDB = require("./db");
 const PORT = process.env.PORT || 5000;
 
 const app = express();
+
 app.use(cors());
 app.use(express.json());
 
@@ -49,7 +50,8 @@ const auth = (req, res, next) => {
   }
 
   try {
-    const decoded = jwt.verify(token, "SECRET_KEY");
+    // ✅ FIXED: Using process.env.JWT_SECRET
+    const decoded = jwt.verify(token, process.env.JWT_SECRET);
     req.userId = decoded.id;
     next();
   } catch (error) {
@@ -88,9 +90,12 @@ app.post("/api/auth/login", async (req, res) => {
   if (!isMatch)
     return res.status(400).json({ message: "Invalid credentials" });
 
-  const token = jwt.sign({ id: user._id }, "SECRET_KEY", {
-    expiresIn: "1h",
-  });
+  // ✅ FIXED: Using process.env.JWT_SECRET
+  const token = jwt.sign(
+    { id: user._id },
+    process.env.JWT_SECRET,
+    { expiresIn: "1h" }
+  );
 
   res.json({ token });
 });
@@ -109,7 +114,6 @@ app.post("/api/attendance/clockin", auth, async (req, res) => {
     const endOfDay = new Date(now);
     endOfDay.setHours(23, 59, 59, 999);
 
-    // Check if already clocked in today
     const existing = await Attendance.findOne({
       userId: req.userId,
       clockIn: { $gte: startOfDay, $lte: endOfDay }
@@ -176,7 +180,6 @@ app.get("/api/attendance/status", auth, async (req, res) => {
   try {
     const now = new Date();
 
-    // Convert to IST manually (important)
     const IST_OFFSET = 5.5 * 60 * 60 * 1000;
     const istNow = new Date(now.getTime() + IST_OFFSET);
 
@@ -186,7 +189,6 @@ app.get("/api/attendance/status", auth, async (req, res) => {
     const endOfDay = new Date(istNow);
     endOfDay.setHours(23, 59, 59, 999);
 
-    // Convert back to UTC for MongoDB comparison
     const startUTC = new Date(startOfDay.getTime() - IST_OFFSET);
     const endUTC = new Date(endOfDay.getTime() - IST_OFFSET);
 
@@ -227,5 +229,5 @@ app.get("/api/attendance/status", auth, async (req, res) => {
 // ==================
 
 app.listen(PORT, () => {
-  console.log("Server running on port 5000");
+  console.log(`Server running on port ${PORT}`);
 });

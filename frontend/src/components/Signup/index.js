@@ -17,7 +17,7 @@ function Signup() {
       }
 
       try {
-        await axios.post("https://karishmaladi-mernstack-project.onrender.com/api/auth/signup", {
+        await axios.post("https://attendanceapp-bdsg.onrender.com/api/auth/signup", {
           name,
           email,
           password,
