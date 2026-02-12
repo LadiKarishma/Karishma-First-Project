@@ -5,6 +5,7 @@ const jwt = require("jsonwebtoken");
 const cors = require("cors");
 
 const connectDB = require("./db");
+const PORT = process.env.PORT || 5000;
 
 const app = express();
 app.use(cors());
@@ -223,6 +224,6 @@ app.get("/api/attendance/status", auth, async (req, res) => {
 // Server
 // ==================
 
-app.listen(5000, () => {
+app.listen(PORT, () => {
   console.log("Server running on port 5000");
 });
